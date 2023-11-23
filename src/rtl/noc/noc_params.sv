@@ -5,16 +5,17 @@ package noc_params;
 
 	localparam DEST_ADDR_SIZE_X = $clog2(MESH_SIZE_X);
 	localparam DEST_ADDR_SIZE_Y = $clog2(MESH_SIZE_Y);
+	localparam DEST_ADDR_SIZE_L = $clog2(5);
 
-	localparam VC_NUM = 2;
+	localparam VC_NUM = 4;
 	localparam VC_SIZE = $clog2(VC_NUM);
 
-	localparam HEAD_PAYLOAD_SIZE = 16;
+	localparam HEAD_PAYLOAD_SIZE = 128;
 
-	localparam FLIT_DATA_SIZE = DEST_ADDR_SIZE_X+DEST_ADDR_SIZE_Y+HEAD_PAYLOAD_SIZE;
+	localparam FLIT_DATA_SIZE = DEST_ADDR_SIZE_X+DEST_ADDR_SIZE_Y+DEST_ADDR_SIZE_L+HEAD_PAYLOAD_SIZE;
 
-	typedef enum logic [2:0] {LOCAL, NORTH, SOUTH, WEST, EAST} port_t;
-	localparam PORT_NUM = 5;
+	typedef enum logic [3:0] {DLA0, DLA1, DLA2, DLA3, SKIP, NORTH, SOUTH, WEST, EAST} port_t;
+	localparam PORT_NUM = 10;
 	localparam PORT_SIZE = $clog2(PORT_NUM);
 
 	typedef enum logic [1:0] {HEAD, BODY, TAIL, HEADTAIL} flit_label_t;
@@ -23,6 +24,7 @@ package noc_params;
 	{
 		logic [DEST_ADDR_SIZE_X-1 : 0] 	x_dest;
 		logic [DEST_ADDR_SIZE_Y-1 : 0] 	y_dest;
+		logic [DEST_ADDR_SIZE_L-1 : 0] 	l_dest;
 		logic [HEAD_PAYLOAD_SIZE-1: 0] 	head_pl;
 	} head_data_t;
 

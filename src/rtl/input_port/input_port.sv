@@ -1,10 +1,14 @@
 import noc_params::*;
 
 module input_port #(
-    parameter BUFFER_SIZE = 8,
-    parameter X_CURRENT = MESH_SIZE_X/2,
-    parameter Y_CURRENT = MESH_SIZE_Y/2
+    parameter BUFFER_SIZE = 8
 )(
+    input [DEST_ADDR_SIZE_X-1 : 0] x_current,
+    input [DEST_ADDR_SIZE_Y-1 : 0] y_current,
+    input                          enable_skip,
+    input [DEST_ADDR_SIZE_X-1 : 0] x_skip_dest,
+    input [DEST_ADDR_SIZE_Y-1 : 0] y_skip_dest,
+    
     input flit_t data_i,
     input valid_flit_i,
     input rst,
@@ -64,14 +68,19 @@ module input_port #(
     endgenerate
 
     rc_unit #(
-        .X_CURRENT(X_CURRENT),
-        .Y_CURRENT(Y_CURRENT),
         .DEST_ADDR_SIZE_X(DEST_ADDR_SIZE_X),
         .DEST_ADDR_SIZE_Y(DEST_ADDR_SIZE_Y)
     )
     rc_unit (
+        .x_current(x_current),
+        .y_current(y_current), 
+        .enable_skip(enable_skip),
+        .x_skip_dest(x_skip_dest),
+        .y_skip_dest(y_skip_dest),  
+          
         .x_dest_i(data_i.data.head_data.x_dest),
         .y_dest_i(data_i.data.head_data.y_dest),
+        .l_dest_i(data_i.data.head_data.l_dest),
         .out_port_o(out_port_cmd)
     );
 

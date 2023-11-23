@@ -64,7 +64,7 @@ module input_buffer #(
         if(rst)
         begin
             ss                  <= IDLE;
-            out_port_o          <= LOCAL;
+            out_port_o          <= DLA0;
             downstream_vc_o     <= 0;
             end_packet          <= 0;
             vc_allocatable_o    <= 0;
