@@ -10,9 +10,9 @@ package noc_params;
 	localparam VC_NUM = 4;
 	localparam VC_SIZE = $clog2(VC_NUM);
 
-	localparam HEAD_PAYLOAD_SIZE = 128;
+	localparam FLIT_DATA_SIZE = 128;
 
-	localparam FLIT_DATA_SIZE = DEST_ADDR_SIZE_X+DEST_ADDR_SIZE_Y+DEST_ADDR_SIZE_L+HEAD_PAYLOAD_SIZE;
+	localparam HEAD_PAYLOAD_SIZE = FLIT_DATA_SIZE - (DEST_ADDR_SIZE_X+DEST_ADDR_SIZE_Y+DEST_ADDR_SIZE_L);
 
 	typedef enum logic [3:0] {DLA0, DLA1, DLA2, DLA3, SKIP, NORTH, SOUTH, WEST, EAST} port_t;
 	localparam PORT_NUM = 10;
