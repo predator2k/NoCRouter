@@ -13,13 +13,12 @@ module fifo_router_bridge (
     input logic   [VC_NUM-1:0]  router_is_on_off_out,  
     input logic   [VC_NUM-1:0]  router_is_allocatable_out,
     // fifo side
-    input  logic [FLIT_DATA_SIZE-1:0]    fifo2router_data,
-    output logic                         router2fifo_en,
-    output logic [FLIT_DATA_SIZE-1:0]    router2fifo_data,
-    input router_write_buffer_afull,
-
-    input  logic dla2noc_fifo_rempty,
-    output logic dla2noc_fifo_ren
+    input                                router_wrbuf_wafull,
+    output logic                         router_wrbuf_wen,
+    output logic [FLIT_DATA_SIZE-1:0]    router_wrbuf_wdata,
+    input  logic                         router_rdbuf_rempty,
+    output logic                         router_rdbuf_ren,
+    input  logic [FLIT_DATA_SIZE-1:0]    router_rdbuf_rdata
 );
 
 // =================================================================================
@@ -29,37 +28,32 @@ module fifo_router_bridge (
 // =================================================================================
 
 assign router_is_allocatable_in = {VC_NUM{1'b1}};
-assign router_is_on_off_in = {VC_NUM{!router_write_buffer_afull}};
+assign router_is_on_off_in = {VC_NUM{!router_wrbuf_wafull}};
 
 // =================================================================================
 //
-// router <--- fifo
+// router ---> fifo
 // 
 // =================================================================================
 
 always@(posedge clk_router or posedge rst_router) begin
     if(rst_router) begin
-            router2fifo_en      <= 1'b0;
-            router2fifo_data    <= {FLIT_DATA_SIZE{1'b0}};
+            router_wrbuf_wen      <= 1'b0;
+            router_wrbuf_wdata    <= {FLIT_DATA_SIZE{1'b0}};
     end else begin
-        if (router_valid_out) begin
-            if(router_data_out.flit_label == HEAD || router_data_out.flit_label == HEADTAIL) begin
-                router2fifo_en   <= 1'b0;
-                router2fifo_data <= {FLIT_DATA_SIZE{1'b0}};
-            end else begin
-                router2fifo_en   <= (~router_write_buffer_afull) & router_valid_out;
-                router2fifo_data <= router_data_out.data;
-            end 
+        if (router_valid_out && router_data_out.flit_label != HEAD && router_data_out.flit_label != HEADTAIL) begin
+            router_wrbuf_wen      <= (~router_wrbuf_wafull) & router_valid_out;
+            router_wrbuf_wdata    <= router_data_out.data;
         end else begin
-            router2fifo_en <= 1'b0;
-            router2fifo_data <= {FLIT_DATA_SIZE{1'b0}};
+            router_wrbuf_wen      <= 1'b0;
+            router_wrbuf_wdata    <= {FLIT_DATA_SIZE{1'b0}};
         end
     end
 end
 
 // =================================================================================
 //
-// router ---> fifo
+// router <--- fifo
 // 
 // =================================================================================
 
@@ -70,6 +64,7 @@ logic                       router_valid_in_next;
 logic                       dla2noc_fifo_ren_next;
 logic       [7:0]           dla2noc_data_len,dla2noc_data_len_next;
 logic                       dla2noc_fifo_rempty_d,dla2noc_fifo_ren_d;
+logic                       flits_vc_id, flits_vc_id_next;
 
 always_ff @(posedge clk_router or posedge rst_router) begin
     if(rst_router) begin
@@ -81,9 +76,10 @@ always_ff @(posedge clk_router or posedge rst_router) begin
         router_data_in.data            <= {FLIT_DATA_SIZE{1'b0}};
         router_valid_in                <= 1'b0;
         dla2noc_data_len               <= 8'b0;
-        dla2noc_fifo_ren               <= 8'b0;
+        router_rdbuf_ren               <= 8'b0;
         dla2noc_fifo_rempty_d          <= 1'b0;
         dla2noc_fifo_ren_d             <= 1'b0;
+        flits_vc_id                    <= 1'b0;
     end else begin
         ss                             <= ss_next;    
         cnt                            <= cnt_next;
@@ -91,16 +87,15 @@ always_ff @(posedge clk_router or posedge rst_router) begin
         router_data_in                 <= router_data_in_next;
         router_valid_in                <= router_valid_in_next;
         dla2noc_data_len               <= dla2noc_data_len_next;
-        dla2noc_fifo_ren               <= dla2noc_fifo_ren_next;
-        dla2noc_fifo_rempty_d          <= dla2noc_fifo_rempty;
-        dla2noc_fifo_ren_d             <= dla2noc_fifo_ren;
+        router_rdbuf_ren               <= dla2noc_fifo_ren_next;
+        dla2noc_fifo_rempty_d          <= router_rdbuf_rempty;
+        dla2noc_fifo_ren_d             <= router_rdbuf_ren;
+        flits_vc_id                    <= flits_vc_id_next;
     end
 end
 
-logic vc0_avail;
-assign vc0_avail = 1'b1;
-logic vc1_avail;
-assign vc1_avail = 1'b1;
+logic ok_to_send;
+assign ok_to_send = flits_vc_id == 1'b0 ? router_is_on_off_out[0] : router_is_on_off_out[1];
 
 always_comb
 begin
@@ -112,14 +107,16 @@ begin
     cnt_next                                              = cnt;
     dla2noc_data_len_next                                 = dla2noc_data_len;
     dla2noc_fifo_ren_next                                 = 1'b0;
+    flits_vc_id_next                                      = flits_vc_id;
 
     case(ss)
     IDLE:
     begin
-        if(!dla2noc_fifo_rempty && (vc0_avail || vc1_avail))
+        if(!router_rdbuf_rempty && (|router_is_on_off_out))
         begin
             ss_next                                      = FETCH_HEAD;
             dla2noc_fifo_ren_next                        = 1'b1;
+            flits_vc_id_next                             = router_is_on_off_out[0] ? 1'b0 : 1'b1;
         end
     end
 
@@ -133,12 +130,12 @@ begin
             ss_next                                      = BODY_STATE;
             router_valid_in_next                         = 1'b1;
             router_data_in_next.flit_label               = HEAD;
-            router_data_in_next.vc_id                    = vc0_avail ? 1'b0 : 1'b1;
-            router_data_in_next.data.head_data.x_dest    = fifo2router_data[FLIT_DATA_SIZE-1:FLIT_DATA_SIZE-4];
-            router_data_in_next.data.head_data.y_dest    = fifo2router_data[FLIT_DATA_SIZE-5:FLIT_DATA_SIZE-8];
-            router_data_in_next.data.head_data.l_dest    = fifo2router_data[FLIT_DATA_SIZE-9:FLIT_DATA_SIZE-11];
-            dla2noc_data_len_next                        = fifo2router_data[FLIT_DATA_SIZE-12:FLIT_DATA_SIZE-19];
-            router_data_in_next.data.head_data.head_pl   = fifo2router_data[FLIT_DATA_SIZE-20:0];
+            router_data_in_next.vc_id                    = flits_vc_id;
+            router_data_in_next.data.head_data.x_dest    = router_rdbuf_rdata[FLIT_DATA_SIZE-1:FLIT_DATA_SIZE-4];
+            router_data_in_next.data.head_data.y_dest    = router_rdbuf_rdata[FLIT_DATA_SIZE-5:FLIT_DATA_SIZE-8];
+            router_data_in_next.data.head_data.l_dest    = router_rdbuf_rdata[FLIT_DATA_SIZE-9:FLIT_DATA_SIZE-11];
+            dla2noc_data_len_next                        = router_rdbuf_rdata[FLIT_DATA_SIZE-12:FLIT_DATA_SIZE-19];
+            router_data_in_next.data.head_data.head_pl   = router_rdbuf_rdata[FLIT_DATA_SIZE-20:0];
             cnt_next                                     = 8'b0;
     end
 
@@ -149,21 +146,21 @@ begin
         begin
             ss_next                                       = TAIL_STATE;
             router_data_in_next.flit_label                = TAIL;
-            router_data_in_next.data                      = fifo2router_data;
-            router_data_in_next.vc_id                     = vc0_avail ? 1'b0 : 1'b1;
+            router_data_in_next.data                      = router_rdbuf_rdata;
+            router_data_in_next.vc_id                     = flits_vc_id;
             cnt_next                                      = 8'b0;
             router_valid_in_next                          = 1'b1;
             dla2noc_fifo_ren_next                         = 1'b0;
         end else begin
             ss_next                                       = BODY_STATE;
             router_data_in_next.flit_label                = BODY;
-            router_data_in_next.data                      = fifo2router_data;
-            router_data_in_next.vc_id                     = vc0_avail ? 1'b0 : 1'b1;
+            router_data_in_next.data                      = router_rdbuf_rdata;
+            router_data_in_next.vc_id                     = flits_vc_id;
             router_valid_in_next                          = dla2noc_fifo_ren_d && !dla2noc_fifo_rempty_d;
             if (dla2noc_fifo_ren_d && !dla2noc_fifo_rempty_d) begin
                 cnt_next                                      = cnt + 8'b1;
             end
-            if (!dla2noc_fifo_rempty && (vc0_avail || vc1_avail) && (dla2noc_data_len-2 != cnt)) begin
+            if (!router_rdbuf_rempty && ok_to_send && (dla2noc_data_len-2 != cnt)) begin
                 dla2noc_fifo_ren_next                         = 1'b1;
             end
         end   

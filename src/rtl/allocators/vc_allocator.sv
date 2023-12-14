@@ -97,7 +97,7 @@ module vc_allocator #(
             for(int down_vc = 0; down_vc < VC_NUM; down_vc = down_vc + 1)
             begin
                 if(~is_available_vc[down_port][down_vc] & idle_downstream_vc_i[down_port][down_vc])
-                begin
+                begin //! ~is_available_vc[down_port][down_vc] guarantees that 1'b0 set by line 90 is considered.
                     is_available_vc_next[down_port][down_vc] = 1'b1;
                 end
             end
@@ -110,6 +110,7 @@ module vc_allocator #(
     mechanism) Virtual Channel available for allocation from
     the downstream Input Port specified as a parameter.
     */
+    //! only 1 VC of only 1 input_port is granted
     function logic [VC_SIZE-1:0] assign_downstream_vc (input port_t port);
         assign_downstream_vc = {VC_SIZE{1'bx}};
         for(int vc = 0; vc < VC_NUM; vc = vc + 1)
