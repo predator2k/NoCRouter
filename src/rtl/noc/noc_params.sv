@@ -20,6 +20,8 @@ package noc_params;
 
 	typedef enum logic [1:0] {HEAD, BODY, TAIL, HEADTAIL} flit_label_t;
 
+	localparam FLIT_TOTAL_SIZE = FLIT_DATA_SIZE + 2;
+
 	typedef struct packed
 	{
 		logic [DEST_ADDR_SIZE_X-1 : 0] 	x_dest;
