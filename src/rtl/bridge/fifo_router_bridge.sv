@@ -1,24 +1,33 @@
 `include "INC_global.v"
 
+`default_nettype none
+
 module fifo_router_bridge (
-    input clk_router,
-    input rst_router,
+    input  logic                clk_router,
+    input  logic                rst_router,
+    input  logic                clk_dla,
+    input  logic                rst_dla,
     // router side
     output flit_t               router_data_in,
     output logic                router_valid_in, 
     output logic  [VC_NUM-1:0]  router_is_on_off_in,  
     output logic  [VC_NUM-1:0]  router_is_allocatable_in,
-    input flit_t                router_data_out,
-    input logic                 router_valid_out, 
-    input logic   [VC_NUM-1:0]  router_is_on_off_out,  
-    input logic   [VC_NUM-1:0]  router_is_allocatable_out,
+    input  flit_t               router_data_out,
+    input  logic                router_valid_out, 
+    input  logic  [VC_NUM-1:0]  router_is_on_off_out,  
+    input  logic  [VC_NUM-1:0]  router_is_allocatable_out,
     // fifo side
     input                                router_wrbuf_wafull,
     output logic                         router_wrbuf_wen,
     output logic [FLIT_DATA_SIZE-1:0]    router_wrbuf_wdata,
     input  logic                         router_rdbuf_rempty,
     output logic                         router_rdbuf_ren,
-    input  logic [FLIT_DATA_SIZE-1:0]    router_rdbuf_rdata
+    input  logic [FLIT_DATA_SIZE-1:0]    router_rdbuf_rdata,
+    // dla2noc grant side
+    output logic [DEST_ADDR_SIZE_X-1 : 0] dla2noc_granted_x,
+    output logic [DEST_ADDR_SIZE_Y-1 : 0] dla2noc_granted_y,
+    output logic [1 : 0]                  dla2noc_granted_dla,
+    output logic                          dla2noc_granted_vld
 );
 
 // =================================================================================
@@ -32,19 +41,70 @@ assign router_is_on_off_in = {VC_NUM{!router_wrbuf_wafull}};
 
 // =================================================================================
 //
+// dla2noc grant
+// 
+// =================================================================================
+
+logic grnt_fifo_wen;
+logic grnt_fifo_wdata;
+
+logic grnt_fifo_ren;
+logic grnt_fifo_rdata;
+logic grnt_fifo_rempty;
+
+async_fifo #(
+  .DW         (DEST_ADDR_SIZE_X+DEST_ADDR_SIZE_Y+2),
+  .AW         (3),
+) dla2noc_grant_fifo (
+  .wclk       (clk_noc         ),
+  .wrst       (rst_noc         ),
+  .wen        (grnt_fifo_wen   ),
+  .wdata      (grnt_fifo_wdata ),
+  
+  .rclk       (clk_dla         ),
+  .rrst       (rst_dla         ),
+  .ren        (grnt_fifo_ren   ),
+  .rdata      (grnt_fifo_rdata ),
+  .rempty     (grnt_fifo_rempty)
+); 
+
+assign grnt_fifo_ren = !grnt_fifo_rempty;
+
+always @(posedge clk_dla or posedge rst_dla) begin
+    if (rst_dla) begin
+        dla2noc_granted_vld <= 1'b0;
+    end else begin
+        dla2noc_granted_vld <= grnt_fifo_ren;
+    end 
+end
+
+assign dla2noc_granted_dla =  grnt_fifo_rdata[1:0];
+assign dla2noc_granted_y   =  grnt_fifo_rdata[2+:DEST_ADDR_SIZE_Y];
+assign dla2noc_granted_x   =  grnt_fifo_rdata[2+DEST_ADDR_SIZE_Y+:DEST_ADDR_SIZE_X];
+
+// =================================================================================
+//
 // router ---> fifo
 // 
 // =================================================================================
 
 always@(posedge clk_router or posedge rst_router) begin
     if(rst_router) begin
-            router_wrbuf_wen      <= 1'b0;
-            router_wrbuf_wdata    <= {FLIT_DATA_SIZE{1'b0}};
+        router_wrbuf_wen      <= 1'b0;
+        router_wrbuf_wdata    <= '0;
     end else begin
-        if (router_valid_out && router_data_out.flit_label != HEAD && router_data_out.flit_label != HEADTAIL) begin
-            router_wrbuf_wen      <= (~router_wrbuf_wafull) & router_valid_out;
-            router_wrbuf_wdata    <= router_data_out.data;
+        if (router_valid_out) begin
+            if (router_data_out.flit_label == HEADTAIL) begin
+                grnt_fifo_wen         <= 1'b1;
+                router_wrbuf_wen      <= 1'b0;
+                grnt_fifo_wdata       <= router_data_out.data.head_data.head_pl[DEST_ADDR_SIZE_X+DEST_ADDR_SIZE_Y+2-1:0];
+            end else if (router_data_out.flit_label != HEAD) begin
+                grnt_fifo_wen         <= 1'b0;
+                router_wrbuf_wen      <= 1'b1;
+                router_wrbuf_wdata    <= router_data_out.data;
+            end
         end else begin
+            grnt_fifo_wen   <= 1'b1;
             router_wrbuf_wen      <= 1'b0;
             router_wrbuf_wdata    <= {FLIT_DATA_SIZE{1'b0}};
         end
@@ -127,6 +187,18 @@ begin
 
     HEAD_STATE:
     begin
+        if (router_rdbuf_rdata[0]) begin
+            ss_next                                      = IDLE;
+            router_valid_in_next                         = 1'b1;
+            router_data_in_next.flit_label               = HEADTAIL;
+            router_data_in_next.vc_id                    = flits_vc_id;
+            router_data_in_next.data.head_data.x_dest    = router_rdbuf_rdata[11:8];
+            router_data_in_next.data.head_data.y_dest    = router_rdbuf_rdata[7:4];
+            router_data_in_next.data.head_data.l_dest    = router_rdbuf_rdata[3:1];
+            dla2noc_data_len_next                        = '0;
+            router_data_in_next.data.head_data.head_pl   = router_rdbuf_rdata[12+DEST_ADDR_SIZE_X+DEST_ADDR_SIZE_Y+2-1:12];
+            cnt_next                                     = '0; 
+        end else begin
             ss_next                                      = BODY_STATE;
             router_valid_in_next                         = 1'b1;
             router_data_in_next.flit_label               = HEAD;
@@ -137,6 +209,7 @@ begin
             dla2noc_data_len_next                        = router_rdbuf_rdata[FLIT_DATA_SIZE-12:FLIT_DATA_SIZE-19];
             router_data_in_next.data.head_data.head_pl   = router_rdbuf_rdata[FLIT_DATA_SIZE-20:0];
             cnt_next                                     = 8'b0;
+        end
     end
 
 
