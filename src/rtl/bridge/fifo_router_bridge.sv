@@ -46,18 +46,18 @@ assign router_is_on_off_in = {VC_NUM{!router_wrbuf_wafull}};
 // =================================================================================
 
 logic grnt_fifo_wen;
-logic grnt_fifo_wdata;
+logic [DEST_ADDR_SIZE_X+DEST_ADDR_SIZE_Y+2-1:0] grnt_fifo_wdata;
 
 logic grnt_fifo_ren;
-logic grnt_fifo_rdata;
+logic [DEST_ADDR_SIZE_X+DEST_ADDR_SIZE_Y+2-1:0] grnt_fifo_rdata;
 logic grnt_fifo_rempty;
 
 async_fifo #(
   .DW         (DEST_ADDR_SIZE_X+DEST_ADDR_SIZE_Y+2),
-  .AW         (3),
+  .AW         (3)
 ) dla2noc_grant_fifo (
-  .wclk       (clk_noc         ),
-  .wrst       (rst_noc         ),
+  .wclk       (clk_router      ),
+  .wrst       (rst_router      ),
   .wen        (grnt_fifo_wen   ),
   .wdata      (grnt_fifo_wdata ),
   
@@ -92,6 +92,7 @@ always@(posedge clk_router or posedge rst_router) begin
     if(rst_router) begin
         router_wrbuf_wen      <= 1'b0;
         router_wrbuf_wdata    <= '0;
+        grnt_fifo_wen         <= 1'b0;
     end else begin
         if (router_valid_out) begin
             if (router_data_out.flit_label == HEADTAIL) begin
@@ -104,7 +105,7 @@ always@(posedge clk_router or posedge rst_router) begin
                 router_wrbuf_wdata    <= router_data_out.data;
             end
         end else begin
-            grnt_fifo_wen   <= 1'b1;
+            grnt_fifo_wen   <= 1'b0;
             router_wrbuf_wen      <= 1'b0;
             router_wrbuf_wdata    <= {FLIT_DATA_SIZE{1'b0}};
         end
