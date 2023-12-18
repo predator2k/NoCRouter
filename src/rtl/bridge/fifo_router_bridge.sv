@@ -17,7 +17,8 @@ module fifo_router_bridge (
     input  logic  [VC_NUM-1:0]  router_is_on_off_out,  
     input  logic  [VC_NUM-1:0]  router_is_allocatable_out,
     // fifo side
-    input                                router_wrbuf_wafull,
+    input                                router_wrbuf_afull,
+    input                                router_wrbuf_full,
     output logic                         router_wrbuf_wen,
     output logic [FLIT_DATA_SIZE-1:0]    router_wrbuf_wdata,
     input  logic                         router_rdbuf_rempty,
@@ -37,7 +38,7 @@ module fifo_router_bridge (
 // =================================================================================
 
 assign router_is_allocatable_in = {VC_NUM{1'b1}};
-assign router_is_on_off_in = {VC_NUM{!router_wrbuf_wafull}};
+assign router_is_on_off_in = {VC_NUM{!router_wrbuf_afull && !router_wrbuf_full}};
 
 // =================================================================================
 //
