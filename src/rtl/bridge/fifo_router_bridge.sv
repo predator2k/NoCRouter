@@ -28,16 +28,7 @@ module fifo_router_bridge (
     output logic [DEST_ADDR_SIZE_X-1 : 0] dla2noc_granted_x,
     output logic [DEST_ADDR_SIZE_Y-1 : 0] dla2noc_granted_y,
     output logic [1 : 0]                  dla2noc_granted_dla,
-    output logic                          dla2noc_granted_vld,
-    // noc2dla grant side
-    input                                 noc2dla_grant_vld,
-    input  [10:0]                         noc2dla_grant_data,
-    output logic                          noc2dla_grant_ack,
-    input  [DEST_ADDR_SIZE_X-1 : 0]       x_current,
-    input  [DEST_ADDR_SIZE_Y-1 : 0]       y_current,
-    input  [1:0]                          DLA_IDX,
-
-    input [  6:0]     stgr_status
+    output logic                          dla2noc_granted_vld
 );
 
 // =================================================================================
@@ -99,53 +90,6 @@ assign dla2noc_granted_x   =  dla2noc_grnt_fifo_rdata[2+DEST_ADDR_SIZE_Y+:DEST_A
 
 // =================================================================================
 //
-// noc2dla grant
-// 
-// =================================================================================
-
-logic noc2dla_grnt_fifo_wen;
-logic noc2dla_grnt_fifo_ren;
-logic [DEST_ADDR_SIZE_X+DEST_ADDR_SIZE_Y+2+11-1:0] noc2dla_grnt_fifo_rdata;
-logic noc2dla_grnt_fifo_rempty;
-
-async_fifo #(
-  .DW         (DEST_ADDR_SIZE_X+DEST_ADDR_SIZE_Y+2+DEST_ADDR_SIZE_X+DEST_ADDR_SIZE_Y+DEST_ADDR_SIZE_L),
-  .AW         (3)
-) noc2dla_grant_fifo (
-  .wclk       (clk_dla                 ),
-  .wrst       (rst_dla                 ),
-  .wen        (noc2dla_grnt_fifo_wen   ),
-  .wdata      (noc2dla_grnt_fifo_wdata ),
-  .wfull      (noc2dla_grnt_fifo_wfull ),
-  
-  .rclk       (clk_router              ),
-  .rrst       (rst_router              ),
-  .ren        (noc2dla_grnt_fifo_ren   ),
-  .rdata      (noc2dla_grnt_fifo_rdata ),
-  .rempty     (noc2dla_grnt_fifo_rempty)
-); 
-
-assign noc2dla_grnt_fifo_wen = noc2dla_grant_vld && !noc2dla_grnt_fifo_wfull;
-assign noc2dla_grnt_fifo_wdata = {x_current, y_current, DLA_IDX, noc2dla_grant_data};
-always @(posedge clk_router or posedge rst_router) begin
-    if (rst_router) begin
-        noc2dla_grant_ack <= 1'b0;
-    end else begin
-        noc2dla_grant_ack <= noc2dla_grnt_fifo_wen;
-    end
-end
-
-logic [DEST_ADDR_SIZE_X+DEST_ADDR_SIZE_Y+1-1:0] noc2dla_grnt_fifo_rdata_head_data;
-logic [DEST_ADDR_SIZE_X-1 : 0]                  noc2dla_grnt_fifo_rdata_dest_x; // 4
-logic [DEST_ADDR_SIZE_Y-1 : 0]                  noc2dla_grnt_fifo_rdata_dest_y; // 4
-logic [DEST_ADDR_SIZE_L-1 : 0]                  noc2dla_grnt_fifo_rdata_dest_l; // 3
-assign noc2dla_grnt_fifo_rdata_dest_l    = noc2dla_grnt_fifo_rdata[0                                                 +:DEST_ADDR_SIZE_L];
-assign noc2dla_grnt_fifo_rdata_dest_y    = noc2dla_grnt_fifo_rdata[DEST_ADDR_SIZE_L                                  +:DEST_ADDR_SIZE_Y];
-assign noc2dla_grnt_fifo_rdata_dest_x    = noc2dla_grnt_fifo_rdata[DEST_ADDR_SIZE_L+DEST_ADDR_SIZE_Y                 +:DEST_ADDR_SIZE_X];
-assign noc2dla_grnt_fifo_rdata_head_data = noc2dla_grnt_fifo_rdata[DEST_ADDR_SIZE_L+DEST_ADDR_SIZE_Y+DEST_ADDR_SIZE_X+:(DEST_ADDR_SIZE_Y+DEST_ADDR_SIZE_X+2)];
-
-// =================================================================================
-//
 // router ---> fifo
 // 
 // =================================================================================
@@ -186,18 +130,14 @@ logic ok_to_send;
 
 assign ok_to_send = vc_id == 1'b0 ? router_is_on_off_out[0] : router_is_on_off_out[1];
 
-assign router_rdbuf_ren = ok_to_send && !router_rdbuf_rempty && vc_id_assigned && stgr_status[5];
-assign noc2dla_grnt_fifo_ren = ok_to_send && !noc2dla_grnt_fifo_rempty && vc_id_assigned && stgr_status[6];
+assign router_rdbuf_ren = ok_to_send && !router_rdbuf_rempty && vc_id_assigned;
 
 logic router_rdbuf_vld;
-logic noc2dla_grnt_fifo_vld;
 always @(posedge clk_router or posedge rst_router) begin
     if (rst_router) begin
         router_rdbuf_vld      <= 1'b0;
-        noc2dla_grnt_fifo_vld <= 1'b0;
     end else begin
         router_rdbuf_vld      <= router_rdbuf_ren;
-        noc2dla_grnt_fifo_vld <= noc2dla_grnt_fifo_ren;
     end
 end
 
@@ -207,7 +147,7 @@ always @(posedge clk_router or posedge rst_router) begin
         vc_id          <= 1'b0;
     end else begin
         if (vc_id_assigned) begin
-            if ((router_data_in.flit_label == HEADTAIL || router_data_in.flit_label == TAIL) || router_valid_in) begin
+            if ((router_data_in.flit_label == HEADTAIL || router_data_in.flit_label == TAIL) && router_valid_in) begin
                 vc_id_assigned <= 1'b0;
             end
         end else begin
@@ -221,10 +161,12 @@ flit_label_t router_rdbuf_rdata_label;
 logic [DEST_ADDR_SIZE_X-1 : 0] router_rdbuf_rdata_dest_x; // 4
 logic [DEST_ADDR_SIZE_Y-1 : 0] router_rdbuf_rdata_dest_y; // 4
 logic [DEST_ADDR_SIZE_L-1 : 0] router_rdbuf_rdata_dest_l; // 3
+logic [DEST_ADDR_SIZE_X+DEST_ADDR_SIZE_Y+1-1:0] noc2dla_grnt_HEAD_pl;
 assign router_rdbuf_rdata_label = flit_label_t'(router_rdbuf_rdata[FLIT_TOTAL_SIZE-1:FLIT_DATA_SIZE]);
 assign router_rdbuf_rdata_dest_l = router_rdbuf_rdata[0                                +:DEST_ADDR_SIZE_L];
 assign router_rdbuf_rdata_dest_y = router_rdbuf_rdata[DEST_ADDR_SIZE_L                 +:DEST_ADDR_SIZE_Y];
 assign router_rdbuf_rdata_dest_x = router_rdbuf_rdata[DEST_ADDR_SIZE_L+DEST_ADDR_SIZE_Y+:DEST_ADDR_SIZE_X];
+assign noc2dla_grnt_HEAD_pl = router_rdbuf_rdata[DEST_ADDR_SIZE_L+DEST_ADDR_SIZE_Y+DEST_ADDR_SIZE_X+:(DEST_ADDR_SIZE_Y+DEST_ADDR_SIZE_X+2)];
 
 
 always @(posedge clk_router or posedge rst_router) begin
@@ -238,22 +180,18 @@ always @(posedge clk_router or posedge rst_router) begin
             router_data_in.vc_id                      <= vc_id;
             router_valid_in                           <= 1'b1;
             router_data_in.flit_label                 <= router_rdbuf_rdata_label;
-            if (router_rdbuf_rdata_label == HEAD) begin
+            if (router_rdbuf_rdata_label == HEAD || router_rdbuf_rdata_label == HEADTAIL) begin
                 router_data_in.data.head_data.x_dest  <= router_rdbuf_rdata_dest_x;
                 router_data_in.data.head_data.y_dest  <= router_rdbuf_rdata_dest_y;
                 router_data_in.data.head_data.l_dest  <= router_rdbuf_rdata_dest_l;
-                router_data_in.data.head_data.head_pl <= '0;
+                if (router_rdbuf_rdata_label == HEAD) begin    
+                    router_data_in.data.head_data.head_pl <= '0;
+                end else begin
+                    router_data_in.data.head_data.head_pl <= noc2dla_grnt_HEAD_pl;
+                end
             end else begin
                 router_data_in.data                   <= router_rdbuf_rdata;
             end
-        end else if (noc2dla_grnt_fifo_vld) begin
-            router_data_in.vc_id                      <= vc_id;
-            router_valid_in                           <= 1'b1;
-            router_data_in.flit_label                 <= HEADTAIL;
-            router_data_in.data.head_data.x_dest      <= noc2dla_grnt_fifo_rdata_dest_x;
-            router_data_in.data.head_data.y_dest      <= noc2dla_grnt_fifo_rdata_dest_y;
-            router_data_in.data.head_data.l_dest      <= noc2dla_grnt_fifo_rdata_dest_l;
-            router_data_in.data.head_data.head_pl     <= noc2dla_grnt_fifo_rdata_head_data;
         end else begin
             router_valid_in                           <= 1'b0;
         end
