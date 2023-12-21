@@ -17,15 +17,15 @@ module input_block #(
     input_block2crossbar.input_block crossbar_if,
     input_block2switch_allocator.input_block sa_if,
     input_block2vc_allocator.input_block va_if,
-    output logic [VC_NUM-1:0] on_off_o [PORT_NUM-1:0],
-    output logic [VC_NUM-1:0] vc_allocatable_o [PORT_NUM-1:0],
-    output logic [VC_NUM-1:0] error_o [PORT_NUM-1:0]
+    output logic on_off_o [PORT_NUM-1:0],
+    output logic vc_allocatable_o [PORT_NUM-1:0],
+    output logic error_o [PORT_NUM-1:0]
 );
     
-    logic [VC_NUM-1:0] is_full [PORT_NUM-1:0];
-    logic [VC_NUM-1:0] is_empty [PORT_NUM-1:0];
+    logic is_full [PORT_NUM-1:0];
+    logic is_empty [PORT_NUM-1:0];
 
-    port_t [VC_NUM-1:0] out_port [PORT_NUM-1:0];
+    port_t out_port [PORT_NUM-1:0];
 
     assign va_if.out_port = out_port;
     assign sa_if.out_port = out_port;
@@ -55,8 +55,8 @@ module input_block #(
                 .valid_flit_i(valid_flit_i[ip]),
                 .rst(rst),
                 .clk(clk),
-                .sa_sel_vc_i(sa_if.vc_sel[ip]),
-                .va_new_vc_i(va_if.vc_new[ip]),
+                // .sa_sel_vc_i(sa_if.vc_sel[ip]),
+                // .va_new_vc_i(va_if.vc_new[ip]),
                 .va_valid_i(va_if.vc_valid[ip]),
                 .sa_valid_i(sa_if.valid_sel[ip]),
                 .xb_flit_o(crossbar_if.flit[ip]),
@@ -64,7 +64,7 @@ module input_block #(
                 .is_allocatable_vc_o(vc_allocatable_o[ip]),
                 .va_request_o(va_if.vc_request[ip]),
                 .sa_request_o(sa_if.switch_request[ip]),
-                .sa_downstream_vc_o(sa_if.downstream_vc[ip]),
+                // .sa_downstream_vc_o(sa_if.downstream_vc[ip]),
                 .out_port_o(out_port[ip]),
                 .is_full_o(is_full[ip]),
                 .is_empty_o(is_empty[ip]),

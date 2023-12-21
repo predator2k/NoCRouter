@@ -3,19 +3,19 @@
 `default_nettype none
 
 module fifo_router_bridge (
-    input  logic                clk_router,
-    input  logic                rst_router,
-    input  logic                clk_dla,
-    input  logic                rst_dla,
+    input  logic     clk_router,
+    input  logic     rst_router,
+    input  logic     clk_dla,
+    input  logic     rst_dla,
     // router side
-    output flit_t               router_data_in,
-    output logic                router_valid_in, 
-    output logic  [VC_NUM-1:0]  router_is_on_off_in,  
-    output logic  [VC_NUM-1:0]  router_is_allocatable_in,
-    input  flit_t               router_data_out,
-    input  logic                router_valid_out, 
-    input  logic  [VC_NUM-1:0]  router_is_on_off_out,  
-    input  logic  [VC_NUM-1:0]  router_is_allocatable_out,
+    output flit_t    router_data_in,
+    output logic     router_valid_in, 
+    output logic     router_is_on_off_in,  
+    output logic     router_is_allocatable_in,
+    input  flit_t    router_data_out,
+    input  logic     router_valid_out, 
+    input  logic     router_is_on_off_out,  
+    input  logic     router_is_allocatable_out,
     // fifo side
     input                                router_wrbuf_afull,
     input                                router_wrbuf_full,
@@ -39,9 +39,9 @@ module fifo_router_bridge (
 
 logic dla2noc_grnt_fifo_wfull;
 logic dla2noc_grnt_fifo_awfull;
-assign router_is_allocatable_in = {VC_NUM{1'b1}};
-assign router_is_on_off_in = {VC_NUM{!router_wrbuf_afull && !router_wrbuf_full && 
-    !dla2noc_grnt_fifo_awfull && !dla2noc_grnt_fifo_wfull}};
+assign router_is_allocatable_in = 1'b1;
+assign router_is_on_off_in = !router_wrbuf_afull && !router_wrbuf_full && 
+    !dla2noc_grnt_fifo_awfull && !dla2noc_grnt_fifo_wfull;
 
 // =================================================================================
 //
@@ -125,12 +125,14 @@ end
 // 
 // =================================================================================
 
-logic vc_id, vc_id_assigned;
+// logic vc_id, vc_id_assigned;
 logic ok_to_send;
 
-assign ok_to_send = vc_id == 1'b0 ? router_is_on_off_out[0] : router_is_on_off_out[1];
+// assign ok_to_send = vc_id == 1'b0 ? router_is_on_off_out[0] : router_is_on_off_out[1];
+assign ok_to_send = router_is_on_off_out;
 
-assign router_rdbuf_ren = ok_to_send && !router_rdbuf_rempty && vc_id_assigned;
+// assign router_rdbuf_ren = ok_to_send && !router_rdbuf_rempty && vc_id_assigned;
+assign router_rdbuf_ren = ok_to_send && !router_rdbuf_rempty;
 
 logic router_rdbuf_vld;
 always @(posedge clk_router or posedge rst_router) begin
@@ -141,21 +143,21 @@ always @(posedge clk_router or posedge rst_router) begin
     end
 end
 
-always @(posedge clk_router or posedge rst_router) begin
-    if (rst_router) begin
-        vc_id_assigned <= 1'b0;
-        vc_id          <= 1'b0;
-    end else begin
-        if (vc_id_assigned) begin
-            if ((router_data_in.flit_label == HEADTAIL || router_data_in.flit_label == TAIL) && router_valid_in) begin
-                vc_id_assigned <= 1'b0;
-            end
-        end else begin
-            vc_id_assigned <= |router_is_on_off_out;
-            vc_id          <= router_is_on_off_out[0]? 1'b0:1'b1;
-        end
-    end
-end
+// always @(posedge clk_router or posedge rst_router) begin
+//     if (rst_router) begin
+//         vc_id_assigned <= 1'b0;
+//         // vc_id          <= 1'b0;
+//     end else begin
+//         if (vc_id_assigned) begin
+//             if ((router_data_in.flit_label == HEADTAIL || router_data_in.flit_label == TAIL) && router_valid_in) begin
+//                 vc_id_assigned <= 1'b0;
+//             end
+//         end else begin
+//             vc_id_assigned <= |router_is_on_off_out;
+//             // vc_id          <= router_is_on_off_out[0]? 1'b0:1'b1;
+//         end
+//     end
+// end
 
 flit_label_t router_rdbuf_rdata_label;
 logic [DEST_ADDR_SIZE_X-1 : 0] router_rdbuf_rdata_dest_x; // 4
@@ -173,11 +175,11 @@ always @(posedge clk_router or posedge rst_router) begin
     if (rst_router) begin
         router_data_in.flit_label                     <= HEADTAIL;
         router_data_in.data                           <= '0;
-        router_data_in.vc_id                          <= 1'b0;
+        // router_data_in.vc_id                          <= 1'b0;
         router_valid_in                               <= 1'b0;
     end else begin
         if (router_rdbuf_vld) begin
-            router_data_in.vc_id                      <= vc_id;
+            // router_data_in.vc_id                      <= vc_id;
             router_valid_in                           <= 1'b1;
             router_data_in.flit_label                 <= router_rdbuf_rdata_label;
             if (router_rdbuf_rdata_label == HEAD || router_rdbuf_rdata_label == HEADTAIL) begin

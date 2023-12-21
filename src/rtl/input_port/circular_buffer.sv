@@ -3,12 +3,12 @@ import noc_params::*;
 module circular_buffer #(
     parameter BUFFER_SIZE = 8
 )(
-    input flit_novc_t data_i,
+    input flit_t data_i,
     input read_i,
     input write_i,
     input rst,
     input clk,
-    output flit_novc_t data_o,
+    output flit_t data_o,
     output logic is_full_o,
     output logic is_empty_o,
     output logic on_off_o
@@ -17,7 +17,7 @@ module circular_buffer #(
     localparam ON_OFF_LATENCY = 2;
     localparam [31:0] POINTER_SIZE = $clog2(BUFFER_SIZE);
 
-    flit_novc_t memory[BUFFER_SIZE-1:0];
+    flit_t memory[BUFFER_SIZE-1:0];
 
     logic [POINTER_SIZE-1:0] read_ptr;
     logic [POINTER_SIZE-1:0] write_ptr;

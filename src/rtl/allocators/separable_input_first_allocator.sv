@@ -1,18 +1,18 @@
 import noc_params::*;
 
 module separable_input_first_allocator #(
-    parameter VC_NUM = 2
+    // parameter VC_NUM = 1
 )(
     input rst,
     input clk,
-    input [PORT_NUM-1:0][VC_NUM-1:0] request_i,
-    input port_t [VC_NUM-1:0] out_port_i [PORT_NUM-1:0],
-    output logic [PORT_NUM-1:0][VC_NUM-1:0] grant_o
+    input [PORT_NUM-1:0] request_i,
+    input port_t  out_port_i [PORT_NUM-1:0],
+    output logic [PORT_NUM-1:0] grant_o
 );
 
     logic [PORT_NUM-1:0][PORT_NUM-1:0] out_request;
     logic [PORT_NUM-1:0][PORT_NUM-1:0] ip_grant;
-    logic [PORT_NUM-1:0][VC_NUM-1:0] vc_grant;
+    logic [PORT_NUM-1:0] vc_grant;
 
     /*
     First stage:
@@ -24,7 +24,7 @@ module separable_input_first_allocator #(
         for(in_arb=0; in_arb<PORT_NUM; in_arb++)
         begin: generate_input_round_robin_arbiters
             round_robin_arbiter #(
-                .AGENTS_NUM(VC_NUM)
+                .AGENTS_NUM(1)
             )
             round_robin_arbiter (
                 .rst(rst),
@@ -70,32 +70,32 @@ module separable_input_first_allocator #(
     always_comb
     begin
         out_request = {PORT_NUM*PORT_NUM{1'b0}};
-        grant_o= {PORT_NUM*VC_NUM{1'b0}};
+        grant_o= {PORT_NUM{1'b0}};
 
         for(int in_port = 0; in_port < PORT_NUM; in_port = in_port + 1)
         begin
-            for(int in_vc = 0; in_vc < VC_NUM; in_vc = in_vc + 1)
-            begin
-                if(vc_grant[in_port][in_vc])
+            // for(int in_vc = 0; in_vc < VC_NUM; in_vc = in_vc + 1)
+            // begin
+                if(vc_grant[in_port])
                 begin
-                    out_request[out_port_i[in_port][in_vc]][in_port] = 1'b1;
+                    out_request[out_port_i[in_port]][in_port] = 1'b1;
                     break;
                 end
-            end
+            // end
         end
 
         for(int out_port = 0; out_port < PORT_NUM; out_port = out_port + 1)
         begin
             for(int in_port = 0; in_port < PORT_NUM; in_port = in_port + 1)
             begin
-                for(int in_vc = 0; in_vc < VC_NUM; in_vc = in_vc + 1)
-                begin
-                    if(ip_grant[out_port][in_port] & vc_grant[in_port][in_vc])
+                // for(int in_vc = 0; in_vc < VC_NUM; in_vc = in_vc + 1)
+                // begin
+                    if(ip_grant[out_port][in_port] & vc_grant[in_port])
                     begin
-                        grant_o[in_port][in_vc] = 1'b1;
+                        grant_o[in_port] = 1'b1;
                         break;
                     end
-                end
+                // end
             end
         end
 

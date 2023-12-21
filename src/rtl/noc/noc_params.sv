@@ -7,8 +7,8 @@ package noc_params;
 	localparam DEST_ADDR_SIZE_Y = $clog2(MESH_SIZE_Y);
 	localparam DEST_ADDR_SIZE_L = $clog2(5);
 
-	localparam VC_NUM = 2;
-	localparam VC_SIZE = $clog2(VC_NUM);
+	// localparam VC_NUM = 1;
+	// localparam VC_SIZE = $clog2(VC_NUM);
 
 	localparam FLIT_DATA_SIZE = 128;
 
@@ -33,7 +33,7 @@ package noc_params;
 	typedef struct packed
 	{
 		flit_label_t			flit_label;
-		logic [VC_SIZE-1 : 0] 	vc_id;
+		// logic [VC_SIZE-1 : 0] 	vc_id;
 		union packed
 		{
 			head_data_t 		head_data;
@@ -41,14 +41,14 @@ package noc_params;
 		} data;
 	} flit_t;
 
-    typedef struct packed
-    {
-        flit_label_t flit_label;
-        union packed
-        {
-            head_data_t head_data;
-            logic [FLIT_DATA_SIZE-1 : 0] bt_pl;
-        } data;
-    } flit_novc_t;
+    // typedef struct packed
+    // {
+    //     flit_label_t flit_label;
+    //     union packed
+    //     {
+    //         head_data_t head_data;
+    //         logic [FLIT_DATA_SIZE-1 : 0] bt_pl;
+    //     } data;
+    // } flit_novc_t;
 
 endpackage

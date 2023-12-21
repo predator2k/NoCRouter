@@ -3,10 +3,10 @@ import noc_params::*;
 module input_buffer #(
     parameter BUFFER_SIZE = 8
 )(
-    input flit_novc_t data_i,
+    input flit_t data_i,
     input read_i,
     input write_i,
-    input [VC_SIZE-1:0] vc_new_i,
+    // input [VC_SIZE-1:0] vc_new_i,
     input vc_valid_i,
     input port_t out_port_i,
     input rst,
@@ -19,20 +19,20 @@ module input_buffer #(
     output logic vc_request_o,
     output logic switch_request_o,
     output logic vc_allocatable_o,
-    output logic [VC_SIZE-1:0] downstream_vc_o,
+    // output logic [VC_SIZE-1:0] downstream_vc_o,
     output logic error_o
 );
 
     enum logic [1:0] {IDLE, VA, SA} ss, ss_next;
 
-    logic [VC_SIZE-1:0] downstream_vc_next;
+    // logic [VC_SIZE-1:0] downstream_vc_next;
 
     logic read_cmd, write_cmd;
     logic end_packet, end_packet_next;
     logic vc_allocatable_next;
     logic error_next;
 
-    flit_novc_t read_flit;
+    flit_t read_flit;
 
     port_t out_port_next;
 
@@ -65,7 +65,7 @@ module input_buffer #(
         begin
             ss                  <= IDLE;
             out_port_o          <= DLA0;
-            downstream_vc_o     <= 0;
+            // downstream_vc_o     <= 0;
             end_packet          <= 0;
             vc_allocatable_o    <= 0;
             error_o             <= 0;
@@ -74,7 +74,7 @@ module input_buffer #(
         begin
             ss                  <= ss_next;
             out_port_o          <= out_port_next;
-            downstream_vc_o     <= downstream_vc_next;
+            // downstream_vc_o     <= downstream_vc_next;
             end_packet          <= end_packet_next;
             vc_allocatable_o    <= vc_allocatable_next;
             error_o             <= error_next;
@@ -97,12 +97,12 @@ module input_buffer #(
     always_comb
     begin
         data_o.flit_label = read_flit.flit_label;
-		data_o.vc_id = downstream_vc_o;
+		// data_o.vc_id = downstream_vc_o;
 		data_o.data = read_flit.data;
 
         ss_next = ss;
         out_port_next = out_port_o;
-        downstream_vc_next = downstream_vc_o;
+        // downstream_vc_next = downstream_vc_o;
 
         read_cmd = 0;
         write_cmd = 0;
@@ -139,7 +139,7 @@ module input_buffer #(
                 if(vc_valid_i)
                 begin
                     ss_next = SA;
-                    downstream_vc_next = vc_new_i;
+                    // downstream_vc_next = vc_new_i;
                 end
 
                 vc_request_o = 1;

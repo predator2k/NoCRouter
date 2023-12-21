@@ -15,16 +15,16 @@ module router #(
     //connections from upstream
     output flit_t data_out [PORT_NUM-1:0],
     output logic  [PORT_NUM-1:0] is_valid_out,
-    input   [PORT_NUM-1:0] [VC_NUM-1:0] is_on_off_in,
-    input   [PORT_NUM-1:0] [VC_NUM-1:0] is_allocatable_in,
+    input   [PORT_NUM-1:0] is_on_off_in,
+    input   [PORT_NUM-1:0] is_allocatable_in,
 
     //connections from downstream
     input flit_t data_in [PORT_NUM-1:0],
     input  is_valid_in [PORT_NUM-1:0],
-    output logic  [VC_NUM-1:0] is_on_off_out [PORT_NUM-1:0],
-    output logic  [VC_NUM-1:0] is_allocatable_out [PORT_NUM-1:0],
+    output logic  is_on_off_out [PORT_NUM-1:0],
+    output logic  is_allocatable_out [PORT_NUM-1:0],
 
-    output logic [VC_NUM-1:0] error_o [PORT_NUM-1:0]
+    output logic error_o [PORT_NUM-1:0]
 );
 
     input_block2crossbar ib2xbar_if();
