@@ -42,7 +42,7 @@ module switch_allocator #(
             valid_flit_o[port] = 1'b0;
             // ib_if.vc_sel[port] = {VC_SIZE{1'b0}};
             xbar_if.input_vc_sel[port] = {PORT_SIZE{1'b0}};
-            request_cmd[port]={VC_NUM{1'b0}};
+            request_cmd[port]='0;
         end
 
         for(int up_port = 0; up_port < PORT_NUM; up_port = up_port + 1)

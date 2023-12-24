@@ -7,7 +7,7 @@ module round_robin_arbiter #(
     output logic [AGENTS_NUM-1:0] grants_o
 );
 
-    localparam [31:0] AGENTS_PTR_SIZE = $clog2(AGENTS_NUM);
+    localparam [31:0] AGENTS_PTR_SIZE = $clog2(AGENTS_NUM)+1;
 
     logic [AGENTS_PTR_SIZE-1:0] highest_priority, highest_priority_next;
 
