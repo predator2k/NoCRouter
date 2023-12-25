@@ -38,34 +38,29 @@ module input_port #(
     logic write_cmd;
 
     genvar vc;
-    generate
-        // for(vc=0; vc<VC_NUM; vc++)
-        begin: generate_virtual_channels
-            input_buffer #(
-                .BUFFER_SIZE(BUFFER_SIZE)
-            )
-            input_buffer (
-                .data_i(data_cmd),
-                .read_i(read_cmd),
-                .write_i(write_cmd),
-                // .vc_new_i(va_new_vc_i),
-                .vc_valid_i(va_valid_i),
-                .out_port_i(out_port_cmd),
-                .rst(rst),
-                .clk(clk),
-                .data_o(data_out),
-                .is_full_o(is_full_o),
-                .is_empty_o(is_empty_o),
-                .on_off_o(is_on_off_o),
-                .out_port_o(out_port_o),
-                .vc_request_o(va_request_o),
-                .switch_request_o(sa_request_o),
-                .vc_allocatable_o(is_allocatable_vc_o),
-                // .downstream_vc_o(sa_downstream_vc_o),
-                .error_o(error_o)
-            );
-        end
-    endgenerate
+    input_buffer #(
+        .BUFFER_SIZE(BUFFER_SIZE)
+    )
+    input_buffer (
+        .data_i(data_cmd),
+        .read_i(read_cmd),
+        .write_i(write_cmd),
+        // .vc_new_i(va_new_vc_i),
+        .vc_valid_i(va_valid_i),
+        .out_port_i(out_port_cmd),
+        .rst(rst),
+        .clk(clk),
+        .data_o(data_out),
+        .is_full_o(is_full_o),
+        .is_empty_o(is_empty_o),
+        .on_off_o(is_on_off_o),
+        .out_port_o(out_port_o),
+        .vc_request_o(va_request_o),
+        .switch_request_o(sa_request_o),
+        .vc_allocatable_o(is_allocatable_vc_o),
+        // .downstream_vc_o(sa_downstream_vc_o),
+        .error_o(error_o)
+    );
 
     rc_unit #(
         .DEST_ADDR_SIZE_X(DEST_ADDR_SIZE_X),
