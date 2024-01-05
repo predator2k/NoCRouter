@@ -14,7 +14,7 @@ module circular_buffer #(
     output logic on_off_o
 );
 
-    localparam ON_OFF_LATENCY = 2;
+    localparam ON_OFF_LATENCY = 4;
     localparam [31:0] POINTER_SIZE = $clog2(BUFFER_SIZE);
 
     flit_t memory[BUFFER_SIZE-1:0];

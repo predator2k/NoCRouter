@@ -37,6 +37,7 @@ module rc_unit #(
     */
     always_comb
     begin
+        out_port_o = DLA0;
         if (enable_skip) begin
             if (x_offset == 0 & y_offset == 0) begin
                 if (l_dest_i == 0) begin
