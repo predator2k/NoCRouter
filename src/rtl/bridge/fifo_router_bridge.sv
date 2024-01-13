@@ -1,6 +1,6 @@
 `include "INC_global.v"
 
-`default_nettype none
+// `default_nettype none
 
 module fifo_router_bridge (
     input  logic     clk,
