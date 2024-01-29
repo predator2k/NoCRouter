@@ -16,7 +16,6 @@ module router_ahb_csr #(
    output  logic                o_hready,
    output  logic [DWIDTH-1:0]   o_hrdata,
    output  logic [1:0]          o_hresp,
-   output  logic                changed,
    //csr
    output logic [31:0] o_router_cfg_0,
    output logic [31:0] o_router_cfg_1,
@@ -104,12 +103,5 @@ module router_ahb_csr #(
       .i_router_sta_7(i_router_sta_7)
 );
 
-always @(posedge i_hclk or posedge i_hreset) begin
-   if(i_hreset) begin
-      changed <= 1'b0;
-   end else begin
-      changed <= slv_write;
-   end
-end
 
 endmodule
