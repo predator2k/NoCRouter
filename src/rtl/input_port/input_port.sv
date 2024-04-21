@@ -5,7 +5,7 @@ module input_port #(
 )(
     input [DEST_ADDR_SIZE_X-1 : 0] x_current,
     input [DEST_ADDR_SIZE_Y-1 : 0] y_current,
-    input                          enable_skip,
+    input [7:0]                    router_conn,
     input [DEST_ADDR_SIZE_X-1 : 0] x_skip_dest,
     input [DEST_ADDR_SIZE_Y-1 : 0] y_skip_dest,
     
@@ -69,7 +69,7 @@ module input_port #(
     rc_unit (
         .x_current(x_current),
         .y_current(y_current), 
-        .enable_skip(enable_skip),
+        .router_conn(router_conn),
         .x_skip_dest(x_skip_dest),
         .y_skip_dest(y_skip_dest),  
           
